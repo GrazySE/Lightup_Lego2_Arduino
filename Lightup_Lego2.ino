@@ -27,7 +27,7 @@ void setup() {
   // End of trinket special code
 
   strip.begin(); // This initializes the NeoPixel library.
-  pinMode(2, INPUT_PULLUP);
+  //pinMode(2, INPUT_PULLUP);
   /* coord[2][2] = strip.Color(150, 0, 0);
     coord[3][3] = strip.Color(0, 0, 150);
     coord[4][4] = strip.Color(150, 0, 150);
@@ -60,7 +60,7 @@ void loop() {
 
     String index  = Serial.readStringUntil(',');
     String color  = Serial.readStringUntil('\0');
-        //String color = Serial.readStringUntil(',');
+    //String color = Serial.readStringUntil(',');
     // strip.setPixelColor(index.toInt(), int(0xFF998800)); // textdata
     char array[10];
     color.toCharArray(array, 10);
@@ -174,4 +174,49 @@ uint32_t hex2int(char *hex) {
     val = (val << 4) | (byte & 0xF);
   }
   return val;
+}
+
+
+void getColumn(int x, int index) {
+  color row[]=new color[16]; 
+  int r=0, g=0, b=0, antal=0;
+  colorMode(RGB);
+
+  loadPixels();
+  for (int i=0; i<16; i++) {
+    row[i] = get(x, gridSize*i+topBound+1);
+
+    //int hue=int(hue(row[i]));
+    int saturation=int(saturation(row[i]));
+    int brightness=int(brightness(row[i]));
+
+    stroke(255);
+    if ((saturation> 75 && saturation<125 && brightness>25 && brightness<75 ) || (saturation> 25 && saturation<75 && brightness>200 && brightness<250) || (saturation> 25 && saturation<25 && brightness>250) ) {
+      stroke(0);//ignore color range
+    } else antal++;
+    noFill();
+   ellipse( int(x), gridSize*i+topBound +1, 5, 5);
+
+   // println("row" +i+" brick is color: " +row[i]);
+  }
+
+  for (color red : row)  r+=red(red);
+  for (color green : row)   g+=green(green);
+  for (color blue : row)  b+=blue(blue);
+
+  average=color(r/antal, g/antal, b/antal);
+  // println("color" + average);
+  colorMode(HSB);
+  average=color(hue(average), 255, brightness(average-50));
+  try {
+    if (key=='n') {
+      arduinoPort.write(index+",0x"+hex(average).substring(2, 8)+"\0");
+      //println(index);
+      println("index:"+index+" amount: "+antal+" RGB "+red(average), green(average), blue(average));
+    }
+  }
+  catch(Exception e) {
+    println(e +" antal counted:"+antal);
+  }
+  colorMode(RGB);
 }

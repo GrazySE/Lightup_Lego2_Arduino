@@ -1,20 +1,19 @@
 #include <Adafruit_NeoPixel.h>
-
 #ifdef __AVR__
 #include <avr/power.h>
 #endif
 
 // Which pin on the Arduino is connected to the NeoPixels?
 // On a Trinket or Gemma we suggest changing this to 1
-#define PIN            9
+#define PIN  9
 
 // How many NeoPixels are attached to the Arduino?
-#define NUMPIXELS      40
+#define NUMPIXELS    56
 const int NUMCELLS   =  32;
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 
-boolean pSerialConnected, serialConnected;
-int steps, loadingIndex, loadingInterval = 150;
+boolean pSerialConnected, serialConnected,pBState;
+int steps, loadingIndex, preset = 0, loadingInterval = 100;
 long timer;
 const int columns = 16, rows = 16;
 uint32_t coord[columns][rows];
@@ -27,7 +26,6 @@ void setup() {
   // End of trinket special code
 
   strip.begin(); // This initializes the NeoPixel library.
-  //pinMode(2, INPUT_PULLUP);
   /* coord[2][2] = strip.Color(150, 0, 0);
     coord[3][3] = strip.Color(0, 0, 150);
     coord[4][4] = strip.Color(150, 0, 150);
@@ -50,9 +48,17 @@ void setup() {
     waitAndListenAnim();
   }
   comfirmAnim();
+  pinMode(10, INPUT_PULLUP);
+
+  pinMode(6, OUTPUT);
+  pinMode(5, OUTPUT);
+  digitalWrite(5, HIGH);
+  digitalWrite(6, HIGH);
 }
 
 void loop() {
+  checkForPreset();
+
   if (!Serial) serialConnected = false;
   else serialConnected = true;
   if (Serial.available() > 0) {
@@ -139,10 +145,11 @@ void comfirmAnim() {
 }
 
 void waitAndListenAnim() {
+  checkForPreset();
   if (timer + loadingInterval < millis()) {
     timer = millis();
-    if (loadingIndex <= NUMPIXELS)loadingIndex++; else loadingIndex = 0;
-    for (int i = 0; i < NUMPIXELS; i++) {
+    if (loadingIndex <= 56)loadingIndex++; else loadingIndex = 0;
+    for (int i = 0; i < 56; i++) {
       if (loadingIndex == i) strip.setPixelColor(i, strip.Color(100, 100, 100)); // white
       else strip.setPixelColor(i, strip.Color(0, 0, 0)); // black
     }
@@ -176,47 +183,48 @@ uint32_t hex2int(char *hex) {
   return val;
 }
 
-
-void getColumn(int x, int index) {
-  color row[]=new color[16]; 
-  int r=0, g=0, b=0, antal=0;
-  colorMode(RGB);
-
-  loadPixels();
-  for (int i=0; i<16; i++) {
-    row[i] = get(x, gridSize*i+topBound+1);
-
-    //int hue=int(hue(row[i]));
-    int saturation=int(saturation(row[i]));
-    int brightness=int(brightness(row[i]));
-
-    stroke(255);
-    if ((saturation> 75 && saturation<125 && brightness>25 && brightness<75 ) || (saturation> 25 && saturation<75 && brightness>200 && brightness<250) || (saturation> 25 && saturation<25 && brightness>250) ) {
-      stroke(0);//ignore color range
-    } else antal++;
-    noFill();
-   ellipse( int(x), gridSize*i+topBound +1, 5, 5);
-
-   // println("row" +i+" brick is color: " +row[i]);
-  }
-
-  for (color red : row)  r+=red(red);
-  for (color green : row)   g+=green(green);
-  for (color blue : row)  b+=blue(blue);
-
-  average=color(r/antal, g/antal, b/antal);
-  // println("color" + average);
-  colorMode(HSB);
-  average=color(hue(average), 255, brightness(average-50));
-  try {
-    if (key=='n') {
-      arduinoPort.write(index+",0x"+hex(average).substring(2, 8)+"\0");
-      //println(index);
-      println("index:"+index+" amount: "+antal+" RGB "+red(average), green(average), blue(average));
+void checkForPreset() {
+  if (digitalRead(10) && !pBState) {
+    for (int i = 41; i < 56; i++) {
+      switch (preset) {
+        case 0:
+          strip.setPixelColor(i, strip.Color(255, 0, 0)); 
+          break;
+        case 1:
+          strip.setPixelColor(i, strip.Color(255, 255, 0)); 
+          break;
+        case 2:
+          strip.setPixelColor(i, strip.Color(0, 255, 0)); 
+          break;
+        case 3:
+          strip.setPixelColor(i, strip.Color(0, 255, 255)); 
+          break;
+        case 4:
+          strip.setPixelColor(i, strip.Color(0, 0, 255)); 
+          break;
+        case 5:
+          strip.setPixelColor(i, strip.Color(255, 0, 255)); 
+          break;
+        case 6:
+          strip.setPixelColor(i, strip.Color(255, 255, 255)); 
+          break;
+        case 7:
+          strip.setPixelColor(i, strip.Color(100, 100, 100)); 
+          break;
+        case 8:
+          strip.setPixelColor(i, strip.Color(50, 50, 50)); 
+          break;
+        case 9:
+          strip.setPixelColor(i, strip.Color(0, 0, 0));
+          break;
+      }
+      strip.show();
     }
+    if (preset > 8)preset = 0; else preset++;
+    //Serial.println("change Ambient Color");
+    delay(30);
   }
-  catch(Exception e) {
-    println(e +" antal counted:"+antal);
-  }
-  colorMode(RGB);
+    pBState=digitalRead(10);
+
 }
+

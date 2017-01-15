@@ -12,12 +12,14 @@
 const int NUMCELLS   =  32;
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 
-boolean pSerialConnected, serialConnected,pBState;
-int steps, loadingIndex, preset = 0, loadingInterval = 100;
-long timer;
+boolean pSerialConnected, serialConnected, pBState, bState;
+int steps, loadingIndex, preset = 0, loadingInterval = 60;
+long timer, adjustHueTimer;
 const int columns = 16, rows = 16;
+const int buttonPin = 11;
 uint32_t coord[columns][rows];
 String textData = "";
+
 void setup() {
   // This is for Trinket 5V 16MHz, you can remove these three lines if you are not using a Trinket
 #if defined (__AVR_ATtiny85__)
@@ -37,7 +39,9 @@ void setup() {
     coord[8][6] = strip.Color(200, 60, 0);
     coord[12][4] = strip.Color(0, 150, 0);*/
   //Serial.setTimeout(500);
-  Serial.begin(19200);
+  // Serial.begin(19200);
+  Serial.begin(38400);
+
   /*String c="0xFF998800";
     delay(1000);
     Serial.println("yo");*/
@@ -48,12 +52,12 @@ void setup() {
     waitAndListenAnim();
   }
   comfirmAnim();
-  pinMode(10, INPUT_PULLUP);
+  pinMode(buttonPin, INPUT_PULLUP);
 
-  pinMode(6, OUTPUT);
-  pinMode(5, OUTPUT);
-  digitalWrite(5, HIGH);
-  digitalWrite(6, HIGH);
+  /* pinMode(6, OUTPUT);
+    pinMode(5, OUTPUT);
+    digitalWrite(5, HIGH);
+    digitalWrite(6, HIGH);*/
 }
 
 void loop() {
@@ -145,7 +149,7 @@ void comfirmAnim() {
 }
 
 void waitAndListenAnim() {
-  checkForPreset();
+  //checkForPreset();
   if (timer + loadingInterval < millis()) {
     timer = millis();
     if (loadingIndex <= 56)loadingIndex++; else loadingIndex = 0;
@@ -184,47 +188,59 @@ uint32_t hex2int(char *hex) {
 }
 
 void checkForPreset() {
-  if (digitalRead(10) && !pBState) {
+  bState = digitalRead(buttonPin);
+  if (adjustHueTimer + 1000 < millis() && bState && !pBState) {
+    adjustHueTimer = millis();
+    delay(65);
+    if (preset > 10) {
+      preset = 0;
+    }
+    else {
+      preset++;
+    }
     for (int i = 41; i < 56; i++) {
       switch (preset) {
         case 0:
-          strip.setPixelColor(i, strip.Color(255, 0, 0)); 
+          strip.setPixelColor(i, strip.Color(255, 0, 0));
           break;
         case 1:
-          strip.setPixelColor(i, strip.Color(255, 255, 0)); 
+          strip.setPixelColor(i, strip.Color(255, 255, 0));
           break;
         case 2:
-          strip.setPixelColor(i, strip.Color(0, 255, 0)); 
+          strip.setPixelColor(i, strip.Color(0, 255, 0));
           break;
         case 3:
-          strip.setPixelColor(i, strip.Color(0, 255, 255)); 
+          strip.setPixelColor(i, strip.Color(0, 250, 240));
           break;
         case 4:
-          strip.setPixelColor(i, strip.Color(0, 0, 255)); 
+          strip.setPixelColor(i, strip.Color(0, 0, 255));
           break;
         case 5:
-          strip.setPixelColor(i, strip.Color(255, 0, 255)); 
+          strip.setPixelColor(i, strip.Color(255, 0, 255));
           break;
         case 6:
-          strip.setPixelColor(i, strip.Color(255, 255, 255)); 
+          strip.setPixelColor(i, strip.Color(240, 240, 240));
           break;
         case 7:
-          strip.setPixelColor(i, strip.Color(100, 100, 100)); 
+          strip.setPixelColor(i, strip.Color(100, 100, 100));
           break;
         case 8:
-          strip.setPixelColor(i, strip.Color(50, 50, 50)); 
+          strip.setPixelColor(i, strip.Color(50, 50, 50));
           break;
         case 9:
+          strip.setPixelColor(i, strip.Color(10, 10, 10));
+          break;
+        case 10:
           strip.setPixelColor(i, strip.Color(0, 0, 0));
           break;
       }
-      strip.show();
+      delay(15);
     }
-    if (preset > 8)preset = 0; else preset++;
+    //strip.show();
+
     //Serial.println("change Ambient Color");
-    delay(30);
   }
-    pBState=digitalRead(10);
+  pBState = bState;
 
 }
 
